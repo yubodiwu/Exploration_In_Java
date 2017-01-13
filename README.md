@@ -1,14 +1,14 @@
 ## An Exploration in Java
 
-###### Outline:
+### Outline:
 
-######## Intro (describing Java and Spring)
-######## Why use Java? (describe benefits of Java over other programming languages)
-######## How do I use Java? (highlight some of Java's peculiarities)
-######## Using Spring (describe how to start a REST api using spring)
-########## Spring subsection: Maven and IDE (describe Maven and IDE needed to be used)
-########## Spring subsection: Starting a Maven with spring (start a Spring Maven project and get it to say "Hello World!!")
-########## Spring subsection: Building CRUD (build CRUD into spring-based API)
+#### Intro (describing Java and Spring)
+#### Why use Java? (describe benefits of Java over other programming languages)
+#### How do I use Java? (highlight some of Java's peculiarities)
+###### Using Spring (describe how to start a REST api using spring)
+###### Spring subsection: Maven and IDE (describe Maven and IDE needed to be used)
+###### Spring subsection: Starting a Maven with spring (start a Spring Maven project and get it to say "Hello World!!")
+###### Spring subsection: Building CRUD (build CRUD into spring-based API)
 
 #### Introduction:
 This is going to be a short tutorial about Java the programming language and building a mostly REST compliant API server using the Spring framework in Java. It assumes that you have a basic knowledge of programming concepts and some familiarity with how to install and use packages and libraries.
