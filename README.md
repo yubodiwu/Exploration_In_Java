@@ -1,6 +1,8 @@
 ## An Exploration in Java
 
 #### Introduction:
+This is going to be a short tutorial about Java the programming language and building a mostly REST compliant API server using the Spring framework in Java. It assumes that you have a basic knowledge of programming concepts and some familiarity with how to install and use packages and libraries.
+
 Java is a programming language created by Sun Microsystems in 1995, and it would not be a stretch to say it is now the most popular programming language in existence. It is a general purpose, class-based, object-oriented language, and in the creation of java there were 5 principles:
 
 1. It must be "simple, object-oriented, and familiar".
