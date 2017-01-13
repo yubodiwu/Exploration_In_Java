@@ -7,8 +7,6 @@ public class MergeSort {
         }
 
         int midInd = arr.length / 2;
-        int rightStart = midInd + 1;
-
         int[] leftArr = Arrays.copyOfRange(arr, 0, midInd);
         int[] rightArr = Arrays.copyOfRange(arr, midInd, arr.length);
 
