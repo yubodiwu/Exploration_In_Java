@@ -358,4 +358,4 @@ public void deleteCustomer(@RequestBody Long id) {
 }
 ```
 
-And that's a very barebones REST api using Spring!
+And that's a very barebones REST api using Spring! Sample code of everything described in this tutorial is in this repository in "RestfulTest".
