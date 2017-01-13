@@ -6,8 +6,7 @@ package com.mycompany.model;
 public class Customer {
 
     private Long id;
-
-    private String name;
+    String name;
 
     public Customer(Long id, String name) {
         this.id = id;

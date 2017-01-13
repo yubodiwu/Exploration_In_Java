@@ -117,5 +117,245 @@ class ClassMain {
     }
 }
 ```
+The static keyword means that the variable or method is on the class itself rather than an instance of the class and doesn't change from instance to instance.
 
 Those are some of the basic differences from Python and Javascript. In this repository you can also find examples of recursive fibonacci and merge sort in Java.
+
+#### Using Spring:
+###### Requirements: Maven and an IDE (preferably IntelliJ Community Edition):
+Maven is a tool for building and managing Java-based projects and works similar to NPM for node in Javascript, but it's kind of clunky. It manages dependencies in a pom.xml file much like NPM manages dependencies in a package.json file.
+
+IDE stands for integrated development environment and is a software suite that consolidates all of the basic skills that a developer needs to write and test software. Typically an IDE has an editor, compiler/interpreter, and debugger, all in a single GUI. We'll need an IDE to start our server.
+###### Starting a Maven Project and Using Spring:
+After downloading and installing Maven and IntelliJ (Maven can be brew installed), create a new project in IntelliJ selecting for the Maven option. Give it a group ID, artifact ID, and a name. To get the packages we need, open the pom.xml file and add these dependencies:
+
+``` xml
+<parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>1.2.5.RELEASE</version>
+</parent>
+
+<dependencies>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>com.mangofactory</groupId>
+        <artifactId>swagger-springmvc</artifactId>
+        <version>1.0.2</version>
+        <type>jar</type>
+    </dependency>
+</dependencies>
+```
+
+These will give the pom a parent object and inherit some of it's properties as well as adding the dependencies we need. Then right-click the pom.xml file and under the maven drop-down option select "Reimport" to import all of the libraries we'll be depending on. Finally, under "directory" > src > main > Java, right click the Java folder and create a new package, and inside that package we'll create our server files. The file directory and pom.xml should end up looking something like this:
+
+![file directory and pom image](./img/pomxml_and_files.png)
+
+We can start by making an entry point for all the rouets, right-click your package folder (mine is com.mycompany) and create two more packages, one for controllers and one for models, and a class to start the server (i.e. App). Inside this file we'll need to require the necessary package and libraries:
+
+```Java
+package com.mycompany;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.context.annotation.ComponentScan;
+```
+Then, before the code for the class itself some annotation types needed to be added. These can be added to source code (classes, methods, variables etc.) to change the performance. For the app class we'll need two annotations to allow access to and use the controllers, @EnableAutoConfiguration and @ComponentScan. The main method will have one line of code that starts the spring application. It should end up looking something like this (after the imports):
+
+```Java
+@EnableAutoConfiguration
+@ComponentScan("com.mycompany")
+public class App {
+    public static void main(String[] args) {
+        SpringApplication.run(App.class, args);
+    }
+}
+```
+
+We can then add the controllers to the controller package, we'll start with a HelloController class that will simply return "Hello World!!" to get the application running. This will need the @Controller and @RequestMapping("/hello") annotations to make it a controller and to map which HTTP requests are supposed to go through it. RequestMapping can be given an argument "/hello" to ensure that requests to the "/hello" route go through this controller. We'll also need to import the necessary libraries. So we start off with this:
+
+```Java
+package com.mycompany.controller;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+@Controller
+@RequestMapping("/hello")
+public class HelloController {
+
+}
+```
+
+The controller can be given methods to handle different kinds of HTTP requests. These methods will have the @RequestMapping and @ResponseBody annotations. This time @RequestMapping will be given the arguments value = "" and method = RequestMethod.GET to specify this method to take HTTP get requests to "/hello" and @ResponseBody to process the response after receiving an HTTP request. We'll just call the method hello and have it return the string "Hello World!!". So the complete class will look like this (below the import statements):
+
+```Java
+@Controller
+@RequestMapping("/hello")
+public class HelloController {
+    @RequestMapping(value = "", method = RequestMethod.GET)
+    @ResponseBody
+    public String hello() {
+        return "Hello World!!";
+    }
+}
+```
+
+And that's the very barebones of a RESTful API using Spring! To get the API up and running we'll have to create a run configuration, click the edit configuration button here:
+
+![edit config screenshot](./img/editconfig.png)
+
+and select the main class, working directory, and classpath of module. Also make sure it has a JRE (SDK 1.8). After that, run the configuration and try to hit localhost:8080/hello with a get request and "Hello World!!" should print to the screen.
+
+###### Building in CRUD
+Cool as having one route that prints "Hello World!!" to the screen is, it doesn't quite comply with CRUD, so add another class to the controller package, this time calling it CustomerController, and add a class to the model package calling it Customer. All of the routes in this controller can be tested with something like Postman or CURL. The company class will have have a private id and a public name and a getter for the id. The name still has a setter function because otherwise it can't be accessed outside of the package it's in:
+
+```Java
+package com.mycompany.model;
+
+public class Customer {
+    private Long id;
+    String name;
+
+    public Customer(Long id, String name) {
+        this.id = id;
+        this.name = name;
+    }
+
+    public Customer() {
+        // dummy constructor
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+}
+```
+
+The dummy constructor is to bypass the default constructor that would, if not bypassed, introduce errors later on in the routes. The CustomerController class will have the similar libraries to the hello controller, as well as the Customer class, a MediaType class to interpret JSON files, and a @RequestBody which behaves similarly to the @ResponseBody, in addition to List and ArrayList to hold our customers. So we'll start off with this:
+
+```Java
+package com.mycompany.controller;
+
+import com.mycompany.model.Customer;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@Controller
+@RequestMapping("/customers")
+public class CustomerController {
+   private static List<Customer> list = new ArrayList<Customer>();
+
+   static {
+       list.add(new Customer(1l, "Johny Johny"));
+       list.add(new Customer(2l, "Tommy Tommy"));
+   }
+}
+```
+
+This will start a CustomerController with a list of two customers. The l in "1l" and "2l" denote that the number is a long and not an integer. We'll start with the route to get all of the customers, "index" according to REST. Again, @RequestMapping and @ResponseBody will be used, but this time @RequestMapping will have an extra parameter produces = "MediaType.APPLICATION_JSON_VALUE" so that the controller can respond with a JSON when the list of customers is returned. The method ends up looking like this:
+
+```Java
+@RequestMapping(value = "", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+@ResponseBody
+public List<Customer> getAllCustomers() {
+    System.out.println("index hit");
+    return list;
+}
+```
+
+Next is the route to get one customer (by id), the "show" action in REST. This time, the value will be "/{id}" and the method will take an argument with an annotation, @PathVariable("id") Long id. This will take the id when the route "/customers/{id}" is hit and pass it into the method as an argument. Then we can iterate over the list of customers until we find the customer with the correct id and return that customer or return null if no customers with matching ids are found:
+
+```Java
+@RequestMapping(value = "/{id}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+@ResponseBody
+public Customer getCustomerById(@PathVariable("id") Long id) {
+    System.out.println("get hit");
+
+    for (Customer c : list) {
+        if (c.getId() == id) {
+            return c;
+        }
+    }
+
+    return null;
+}
+```
+
+Next is the route for creating a new customer, the "CREATE" action in REST. This time it will also use the @RequestBody annotation to interpret the JSON sent in the @RequestBody and put it through the Customer constructor. The method i nthe @RequestMapping parameters will be RequestMethod.POST and another parameter, consumes = MediaType.APPLICATION_JSON_VALUE will be added so it can take the JSON in the request body, so the route ends up looking like:
+
+```Java
+@RequestMapping(value = "", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
+@ResponseBody
+public List<Customer> addCustomer(@RequestBody Customer customer) {
+    System.out.println("post hit");
+
+    for (Customer c : list) {
+        if (c.getId() == customer.getId()) {
+            System.out.println("already in list");
+            return list;
+        }
+    }
+
+    list.add(customer);
+    return list;
+}
+```
+
+The iterator is to make sure the customer isn't already in the list of customers and terminate if it is. After that is the route for updating a customer, "UPDATE" in REST. This time it will use the HTTP put method, take in a name as a string, and update the customer with the id specified by the path variable:
+
+```Java
+@RequestMapping(value = "/{id}", method = RequestMethod.PUT)
+@ResponseBody
+public void updateCustomer(@PathVariable("id") Long id, @RequestBody String name) {
+    System.out.println("create hit");
+
+    for (Customer c : list) {
+        if (c.getId() == id) {
+            c.setName(name);
+        }
+    }
+}
+```
+
+The last route for this exercise is to delete a customer, "DESTROY" in REST. By now, this should be self-explanatory. Request method is delete, it consumes JSON, and @RequestBody interprets the id passed in the request JSON:
+
+```Java
+@RequestMapping(value = "", method = RequestMethod.DELETE, consumes = MediaType.APPLICATION_JSON_VALUE)
+@ResponseBody
+public void deleteCustomer(@RequestBody Long id) {
+    System.out.println("delete hit");
+    Customer delCustomer = null;
+
+    for (Customer customer : list) {
+        if (customer.getId() == id) {
+            delCustomer = customer;
+        }
+    }
+
+    if (delCustomer == null) {
+        System.out.println("id does not exist");
+    } else {
+        list.remove(delCustomer);
+    }
+}
+```
+
+And that's a very barebones REST api using Spring!

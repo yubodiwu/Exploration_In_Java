@@ -48,6 +48,7 @@ public class CustomerController {
     @ResponseBody
     public Customer getCustomerById(@PathVariable("id") Long id) {
         System.out.println("get hit");
+
         for (Customer c : list) {
             if (c.getId() == id) {
                 return c;
@@ -57,12 +58,14 @@ public class CustomerController {
         return null;
     }
 
-    @RequestMapping(value = "/{id}", method = RequestMethod.PUT, consumes = MediaType.APPLICATION_JSON_VALUE)
+    @RequestMapping(value = "/{id}", method = RequestMethod.PUT)
     @ResponseBody
-    public void updateCustomer(@PathVariable("id") Long id, @RequestBody Customer customer) {
+    public void updateCustomer(@PathVariable("id") Long id, @RequestBody String name) {
+        System.out.println("create hit");
+
         for (Customer c : list) {
-            if (c.getId() == customer.getId()) {
-                c.setName(customer.getName());
+            if (c.getId() == id) {
+                c.setName(name);
             }
         }
     }
@@ -71,7 +74,6 @@ public class CustomerController {
     @ResponseBody
     public void deleteCustomer(@RequestBody Long id) {
         System.out.println("delete hit");
-        System.out.println("id = [" + id + "]");
         Customer delCustomer = null;
 
         for (Customer customer : list) {
