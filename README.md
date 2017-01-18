@@ -371,3 +371,221 @@ public void deleteCustomer(@RequestBody Long id) {
 ```
 
 And that's a very barebones REST api using Spring! Sample code of everything described in this tutorial is in this repository in "RestfulTest".
+
+#### Connecting to a Database
+So far we've been using an array list to hold our created customers, but now let's try to replace that with a psql database. Spring has JDBC (Java Database Connectivity) built into it's functionality so while configuring a database connection is still complicated, as far as configuration of Java applications go it's relatively simple. To start with we'll have to add a Postgres dependency to our pom.xml to connect to Maven databases and reimport the changes:
+```xml
+<dependency>
+    <groupId>org.postgresql</groupId>
+    <artifactId>postgresql</artifactId>
+    <version>9.4-1206-jdbc42</version>
+</dependency>
+```
+Then we'll need to create a database another configuration file, a Beans.xml, to specify our database connections. Create a database named "SpringCompanyTest", and create a Beans.xml in RestfulTest/src/main/resources and put this code in it:
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+    http://www.springframework.org/schema/beans/spring-beans-3.0.xsd ">
+
+    <!-- Initialization for data source -->
+    <bean id="dataSource"
+          class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+        <property name="driverClassName" value="org.postgresql.Driver" />
+        <property name="url" value="jdbc:postgresql://localhost:5432/SpringCompanyTest" />
+        <property name="username" value="postgres" />
+        <property name="password" value="" />
+    </bean>
+
+    <!-- Definition for customerJDBCTemplate bean -->
+    <bean id="customerJDBCTemplate"
+          class="com.mycompany.model.CustomerJDBCTemplate">
+        <property name="dataSource"  ref="dataSource" />
+    </bean>
+</beans>
+```
+Under the dataSource bean, in the url property "SpringCompanyTest" is the name of the database you want to connect to, and the driverClassName property has a value of "org.postgresql.Driver" to specify Postgresql as the database. The customerJDBCTemplate is a template file we'll be creating that contains methods for accessing the database. To create the table we're going to be accessing, run this in psql after connecting to SpringCompanyTest:
+```SQL
+CREATE TABLE customers(
+    id VARCHAR,
+    name TEXT
+);
+```
+Next let's create the template. To start with it'll need imports and package:
+```Java
+package com.mycompany.model;
+
+import org.springframework.jdbc.core.JdbcTemplate;
+import javax.sql.DataSource;
+import java.util.List;
+```
+Next we'll create dataSource and jdbcTemplateObject and set our dataSource:
+```Java
+public class CustomerJDBCTemplate {
+    private DataSource dataSource;
+    private JdbcTemplate jdbcTemplateObject;
+
+    public void setDataSource(DataSource dataSource) {
+        this.dataSource = dataSource;
+        this.jdbcTemplateObject = new JdbcTemplate(dataSource);
+    }
+}
+```
+After that we can finally start building out our database accessing methods. We can start with create, update, and delete methods. The contents of the method are fairly simple, we'll build a SQL query string and then update the jdbcTemplateObject with it. Afterwards CustomerJDBCTemplate should look like this:
+```Java
+public class CustomerJDBCTemplate {
+    private DataSource dataSource;
+    private JdbcTemplate jdbcTemplateObject;
+
+    public void setDataSource(DataSource dataSource) {
+        this.dataSource = dataSource;
+        this.jdbcTemplateObject = new JdbcTemplate(dataSource);
+    }
+
+    public void create(String name, Long id) {
+        String SQL = "insert into customers (name, id) values (?, ?)";
+
+        jdbcTemplateObject.update(SQL, name, id);
+        System.out.println("Created Record Name = " + name +  " id = " + id);
+    }
+
+    public void update(Long id, String name) {
+        String SQL = String.format("update customers set name = '%s' where id = '%s'", name, id);
+        jdbcTemplateObject.update(SQL);
+    }
+
+    public void delete(Long id) {
+        String SQL = String.format("delete from customers where id = '%s'", id);
+        jdbcTemplateObject.update(SQL);
+
+        System.out.println("Deleted Record with ID = " + id);
+    }
+}
+```
+For getting all of the customers in the database or getting a single customer it's a little more complicated, we'll need to create a CustomerMapper class to convert the return from the database to customer objects. It'll look like this:
+```Java
+package com.mycompany.model;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import org.springframework.jdbc.core.RowMapper;
+
+public class CustomerMapper implements RowMapper<Customer>{
+    public Customer mapRow(ResultSet rs, int rowNum) throws SQLException {
+        Customer customer = new Customer();
+        customer.setId((long) (rs.getInt("id")));
+        customer.setName(rs.getString("name"));
+
+        return customer;
+    }
+}
+```
+It implements Spring's JDBC RowMapper class, grabs information from the received SQL result set, and creates an instance of Customer with those SQL results as values for it's parameters. Our getCustomer and listCustomers methods on CustomerJDBCTemplate would then be:
+```Java
+public List<Customer> getCustomer(Long id) {
+    String SQL = String.format("select * from customers where id = '%s'", id);
+    List<Customer> customer = jdbcTemplateObject.query(SQL, new CustomerMapper());
+
+    return customer;
+}
+
+public List<Customer> listCustomers() {
+    String SQL = "select * from customers";
+    List<Customer> customers = jdbcTemplateObject.query(SQL, new CustomerMapper());
+
+    return customers;
+}
+```
+These use jdbcTemplateObject.query instead of update and take `new CustomerMapper()` as an additional parameter. Both return a list of Customer instances, although in the case of getCustomer the list only has one item. So that's all of the database connections, and after that having the server make database calls is pretty simple. Add these two lines to the top of to replace creating and populating the ArrayList and to connect to the database:
+```Java
+ApplicationContext context = new ClassPathXmlApplicationContext("Beans.xml");
+CustomerJDBCTemplate customerJDBCTemplate = (CustomerJDBCTemplate)context.getBean("customerJDBCTemplate");
+```
+After that the changes to the controller are pretty simple, instead of iterating through and making changes in the array list, each route will call a method on customerJDBCTemplate to make the proper change to the database. Some imports will also need to be added. The changed CustomerController class looks like this:
+```Java
+package com.mycompany.controller;
+
+import com.mycompany.model.Customer;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.context.ApplicationContext;
+import com.mycompany.model.CustomerJDBCTemplate;
+
+import java.util.List;
+
+@Controller
+@RequestMapping("/customers")
+public class CustomerController {
+    ApplicationContext context = new ClassPathXmlApplicationContext("Beans.xml");
+    CustomerJDBCTemplate customerJDBCTemplate = (CustomerJDBCTemplate)context.getBean("customerJDBCTemplate");
+
+    @RequestMapping(value = "", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public List<Customer> addCustomer(@RequestBody Customer customer) {
+        System.out.println("post hit");
+        List<Customer> customers = getAllCustomers();
+
+        for (Customer c : customers) {
+            if (c.getId() == customer.getId()) {
+                System.out.println("already in list");
+                return customers;
+            }
+        }
+
+        customerJDBCTemplate.create(customer.getName(), customer.getId());
+        customers = getAllCustomers();
+
+        return customers;
+    }
+
+    @RequestMapping(value = "", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public List<Customer> getAllCustomers() {
+        System.out.println("index hit");
+
+        List<Customer> customers = customerJDBCTemplate.listCustomers();
+
+        return customers;
+    }
+
+    @RequestMapping(value = "/{id}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public List<Customer> getCustomerById(@PathVariable("id") Long id) {
+        System.out.println("get hit");
+
+        List<Customer> customer = customerJDBCTemplate.getCustomer(id);
+
+        return customer;
+    }
+
+    @RequestMapping(value = "/{id}", method = RequestMethod.PUT)
+    @ResponseBody
+    public void updateCustomer(@PathVariable("id") Long id, @RequestBody String name) {
+        System.out.println("create hit");
+
+        customerJDBCTemplate.update(id, name);
+    }
+
+    @RequestMapping(value = "", method = RequestMethod.DELETE, consumes = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public boolean deleteCustomer(@RequestBody Long id) {
+        System.out.println("delete hit");
+
+        List<Customer> delCustomer = getCustomerById(id);
+
+        if (delCustomer.size() == 0) {
+            return false;
+        } else {
+            customerJDBCTemplate.delete(id);
+
+            return true;
+        }
+    }
+}
+```
+The only slightly complicated changes are that addCustomer calls getAllCustomers to check if the customer being added is already in the database or not, then adds the customer, then calls getAllCustomers again so it can return the newly edited database. And deleteCustomer calls getCustomerById to make sure there's a customer at the specified id and then returns a boolean saying whether something was deleted or not.
+
+That's it for connecting to the database, all of the code is in RestfulTest in this repository.

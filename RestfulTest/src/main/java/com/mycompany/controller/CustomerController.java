@@ -1,11 +1,13 @@
 package com.mycompany.controller;
 
 import com.mycompany.model.Customer;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.context.ApplicationContext;
+import com.mycompany.model.CustomerJDBCTemplate;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -14,48 +16,46 @@ import java.util.List;
 @Controller
 @RequestMapping("/customers")
 public class CustomerController {
-
-    private static List<Customer> list = new ArrayList<Customer>();
-
-    static {
-        list.add(new Customer(1l, "Johny Johny"));
-        list.add(new Customer(2l, "Tommy Tommy"));
-    }
+    ApplicationContext context = new ClassPathXmlApplicationContext("Beans.xml");
+    CustomerJDBCTemplate customerJDBCTemplate = (CustomerJDBCTemplate)context.getBean("customerJDBCTemplate");
 
     @RequestMapping(value = "", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public List<Customer> addCustomer(@RequestBody Customer customer) {
         System.out.println("post hit");
-        for (Customer c : list) {
+        List<Customer> customers = getAllCustomers();
+
+        for (Customer c : customers) {
             if (c.getId() == customer.getId()) {
                 System.out.println("already in list");
-                return list;
+                return customers;
             }
         }
 
-        list.add(customer);
-        return list;
+        customerJDBCTemplate.create(customer.getName(), customer.getId());
+        customers = getAllCustomers();
+
+        return customers;
     }
 
     @RequestMapping(value = "", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public List<Customer> getAllCustomers() {
         System.out.println("index hit");
-        return list;
+
+        List<Customer> customers = customerJDBCTemplate.listCustomers();
+
+        return customers;
     }
 
     @RequestMapping(value = "/{id}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
-    public Customer getCustomerById(@PathVariable("id") Long id) {
+    public List<Customer> getCustomerById(@PathVariable("id") Long id) {
         System.out.println("get hit");
 
-        for (Customer c : list) {
-            if (c.getId() == id) {
-                return c;
-            }
-        }
+        List<Customer> customer = customerJDBCTemplate.getCustomer(id);
 
-        return null;
+        return customer;
     }
 
     @RequestMapping(value = "/{id}", method = RequestMethod.PUT)
@@ -63,29 +63,22 @@ public class CustomerController {
     public void updateCustomer(@PathVariable("id") Long id, @RequestBody String name) {
         System.out.println("create hit");
 
-        for (Customer c : list) {
-            if (c.getId() == id) {
-                c.setName(name);
-            }
-        }
+        customerJDBCTemplate.update(id, name);
     }
 
     @RequestMapping(value = "", method = RequestMethod.DELETE, consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
-    public void deleteCustomer(@RequestBody Long id) {
+    public boolean deleteCustomer(@RequestBody Long id) {
         System.out.println("delete hit");
-        Customer delCustomer = null;
 
-        for (Customer customer : list) {
-            if (customer.getId() == id) {
-                delCustomer = customer;
-            }
-        }
+        List<Customer> delCustomer = getCustomerById(id);
 
-        if (delCustomer == null) {
-            System.out.println("id does not exist");
+        if (delCustomer.size() == 0) {
+            return false;
         } else {
-            list.remove(delCustomer);
+            customerJDBCTemplate.delete(id);
+
+            return true;
         }
     }
 }
