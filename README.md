@@ -300,7 +300,7 @@ public Customer getCustomerById(@PathVariable("id") Long id) {
 }
 ```
 
-Next is the route for creating a new customer, the "CREATE" action in REST. This time it will also use the @RequestBody annotation to interpret the JSON sent in the @RequestBody and put it through the Customer constructor. The method i nthe @RequestMapping parameters will be RequestMethod.POST and another parameter, consumes = MediaType.APPLICATION_JSON_VALUE will be added so it can take the JSON in the request body, so the route ends up looking like:
+Next is the route for creating a new customer, the "CREATE" action in REST. This time it will also use the @RequestBody annotation to interpret the JSON sent in the @RequestBody and put it through the Customer constructor. The method in the @RequestMapping parameters will be RequestMethod.POST and another parameter, consumes = MediaType.APPLICATION_JSON_VALUE will be added so it can take the JSON in the request body, so the route ends up looking like:
 
 ```Java
 @RequestMapping(value = "", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
